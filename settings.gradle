@@ -1,0 +1,4 @@
+rootProject.name = 'SortingAlgoritm'
+
+include 'server'
+include 'client'
