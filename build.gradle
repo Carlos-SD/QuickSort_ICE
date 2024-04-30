@@ -1,81 +1,51 @@
 plugins {
-    id 'com.zeroc.gradle.ice-builder.slice' version '1.5.0' // Plugin para Ice Slice
-    id 'java' // Plugin para Java
+    id 'com.zeroc.gradle.ice-builder.slice' version '1.5.0' apply false
+    
 }
 
-// Configuración para el subproyecto del cliente
-project(':client') {
-    apply plugin: 'java' // Aplicamos el plugin de Java
-
-    dependencies {
-        // Dependencias del cliente
-        implementation project(':common') // Dependencia del proyecto común
-        // Otras dependencias específicas del cliente si las hay
-    }
-
-    // Configuración para crear el archivo JAR del cliente
-    jar {
-        // Define el nombre del archivo JAR del cliente
-        archiveFileName = "client.jar"
-        manifest {
-            attributes(
-                    // Clase principal que se ejecutará cuando se inicie el JAR
-                    "Main-Class": project.name.capitalize(),
-                    // Clase-path para las dependencias
-                    "Class-Path": configurations.runtimeClasspath.resolve().collect { it.toURI() }.join(' ')
-            )
-        }
-    }
-}
-
-// Configuración para el subproyecto del servidor
-project(':server') {
-    apply plugin: 'java' // Aplicamos el plugin de Java
-
-    dependencies {
-        // Dependencias del servidor
-        implementation project(':common') // Dependencia del proyecto común
-        // Otras dependencias específicas del servidor si las hay
-    }
-
-    // Configuración para crear el archivo JAR del servidor
-    jar {
-        // Define el nombre del archivo JAR del servidor
-        archiveFileName = "server.jar"
-        manifest {
-            attributes(
-                    // Clase principal que se ejecutará cuando se inicie el JAR
-                    "Main-Class": project.name.capitalize(),
-                    // Clase-path para las dependencias
-                    "Class-Path": configurations.runtimeClasspath.resolve().collect { it.toURI() }.join(' ')
-            )
-        }
-    }
-}
-
-// Configuración común para todos los subproyectos
 subprojects {
-    apply plugin: 'com.zeroc.gradle.ice-builder.slice' // Aplicamos el plugin de Ice Slice
-
-    // Definimos el archivo Slice que se compartirá entre el cliente y el servidor
+    //
+    // Apply Java and Ice Builder plug-ins to all sub-projects
+    //
+    apply plugin: 'java'
+    apply plugin: 'com.zeroc.gradle.ice-builder.slice'
+    //
+    // Both Client and Server projects share the Printer.ice Slice definitions
+    //
     slice {
         java {
-            files = [file("../Sorting.ice")] // Ruta al archivo Slice
+            files = [file("../OrdenamientoZeroC.ice")]
         }
     }
-
-    // Repositorio Maven central para resolver las dependencias
+    //
+    // Use Ice JAR files from maven central repository
+    //
     repositories {
         mavenCentral()
     }
-
-    // Dependencias comunes del proyecto
+    //
+    // Both Client and Server depend only on Ice JAR
+    //
     dependencies {
-        // Dependencia para las pruebas unitarias con JUnit
-        testImplementation platform('org.junit:junit-bom:5.10.0')
-        testImplementation 'org.junit.jupiter:junit-jupiter'
-
-        // Dependencia de Ice
-        implementation 'com.zeroc.ice:ice:3.7.10'
+        implementation 'com.zeroc:ice:3.7.2'
+        testImplementation 'org.junit.jupiter:junit-jupiter:5.10.0'
+        // Dependencia de JUnit Jupiter API
+        testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.2'
     }
+    //
+    // Create a JAR file with the appropriate Main-Class and Class-Path attributes
+    //
+    jar {
+        manifest {
+            attributes(
+                    "Main-Class": project.name.capitalize(),
+                    "Class-Path": configurations.runtimeClasspath.resolve().collect { it.toURI() }.join(' ')
+            )
+        }
+    }
+
+    tasks.named('test', Test) {
+        useJUnitPlatform()
+    }
+
 }

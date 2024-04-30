@@ -5,8 +5,9 @@ import org.junit.jupiter.api.Test;
 
 
 import java.util.Arrays;
+import java.util.Random;
 
-public class QuickSortTest{
+public class QuickSortTest {
 
     @Test
     public void testPrintStringSingleElement() {
@@ -16,6 +17,7 @@ public class QuickSortTest{
         String actualOutput = sorter.printString(input, null);
         assertEquals(expectedOutput, actualOutput);
     }
+
     @Test
     public void testSortAlreadySorted() {
         QuickSortI sorter = new QuickSortI();
@@ -24,6 +26,7 @@ public class QuickSortTest{
         sorter.sort(arr, 0, arr.length - 1);
         assertArrayEquals(expected, arr);
     }
+
     @Test
     public void testSortReverseSorted() {
         QuickSortI sorter = new QuickSortI();
@@ -87,5 +90,70 @@ public class QuickSortTest{
         int pivotIndex = sorter.partition(arr, 0, arr.length - 1);
         assertEquals(0, pivotIndex); // Expecting pivot index 0 for single element array
     }
+
+    @Test
+    public void testSortLargeArray() {
+        QuickSortI sorter = new QuickSortI();
+        int[] arr = {9, 8, 7, 6, 5, 4, 3, 2, 1};
+        int[] expected = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+        sorter.sort(arr, 0, arr.length - 1);
+        assertArrayEquals(expected, arr);
+    }
+
+    @Test
+    public void testSortArrayWithNegativeNumbers() {
+        QuickSortI sorter = new QuickSortI();
+        int[] arr = {3, -2, 5, -1, 4};
+        int[] expected = {-2, -1, 3, 4, 5};
+        sorter.sort(arr, 0, arr.length - 1);
+        assertArrayEquals(expected, arr);
+    }
+
+    @Test
+    public void testSortArrayWithRepeatedNumbers() {
+        QuickSortI sorter = new QuickSortI();
+        int[] arr = {4, 3, 2, 4, 1, 3, 2};
+        int[] expected = {1, 2, 2, 3, 3, 4, 4};
+        sorter.sort(arr, 0, arr.length - 1);
+        assertArrayEquals(expected, arr);
+    }
+
+    @Test
+    public void testSortArrayWithAllEqualNumbers() {
+        QuickSortI sorter = new QuickSortI();
+        int[] arr = {3, 3, 3, 3, 3};
+        int[] expected = {3, 3, 3, 3, 3};
+        sorter.sort(arr, 0, arr.length - 1);
+        assertArrayEquals(expected, arr);
+    }
+
+    @Test
+    public void testSortArrayWithHugeRangeOfValues() {
+        QuickSortI sorter = new QuickSortI();
+        int[] arr = {-1000000, 1000000, 0, 500000, -500000};
+        int[] expected = {-1000000, -500000, 0, 500000, 1000000};
+        sorter.sort(arr, 0, arr.length - 1);
+        assertArrayEquals(expected, arr);
+    }
+
+    @Test
+    public void testSortArrayWithLargeRandomValues() {
+        QuickSortI sorter = new QuickSortI();
+        int[] arr = generateRandomArray(1000, -1000, 1000);
+        int[] expected = Arrays.copyOf(arr, arr.length);
+        Arrays.sort(expected);
+        sorter.sort(arr, 0, arr.length - 1);
+        assertArrayEquals(expected, arr);
+    }
+
+    private int[] generateRandomArray(int size, int min, int max) {
+        Random random = new Random();
+        int[] arr = new int[size];
+        for (int i = 0; i < size; i++) {
+            arr[i] = random.nextInt((max - min) + 1) + min;
+        }
+        return arr;
+    }
+
 }
 

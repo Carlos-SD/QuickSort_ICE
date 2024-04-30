@@ -1,4 +1,3 @@
-rootProject.name = 'SortingAlgoritm'
-
-include 'server'
+rootProject.name = 'OrdenamientoZeroC'
 include 'client'
+include 'server'
