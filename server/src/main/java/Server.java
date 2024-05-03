@@ -10,7 +10,7 @@ public class Server {
      * @throws Exception If there is an error during initialization or execution of the application.
      */
     public static void main(String[] args) {
-        try (Communicator communicator = Util.initialize(args)) {
+        try (Communicator communicator = Util.initialize(args, "serve.cfg")) {
             /**
              * Creates an ObjectAdapter object with the name "SimplePrinterAdapter" and the endpoint "default -p 10000".
              */
@@ -23,6 +23,7 @@ public class Server {
              * Adds the Printer object to the ObjectAdapter with the identity "SimplePrinter".
              */
             adapter.add(printer, Util.stringToIdentity("SimplePrinter"));
+            adapter.add(printer, Util.stringToIdentity("SimpleSort"));
             /**
              * Activates the ObjectAdapter.
              */

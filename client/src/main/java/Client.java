@@ -1,80 +1,99 @@
 import com.zeroc.Ice.*;
 import Demo.PrinterPrx;
 import com.zeroc.Ice.Exception;
-
 import java.util.Arrays;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
-/**
- * This class contains the main method for a client program that sends an array of integers to a server to be sorted.
- * The client reads the number of elements and the elements themselves from the user, sends the array to the server,
- * receives the sorted array from the server, and displays the sorted array to the user.
- */
+public class Client {
 
- public class Client {
-
-    /**
-     * The main method for the client program.
-     * @param args The command-line arguments for the program.
-     */
     public static void main(String[] args) {
-        // Initialize the status variable to 0, which will be used to track the program's exit status
         int status = 0;
 
-        try (Communicator communicator = Util.initialize(args)) {
-            // Create a proxy object from the string "SimplePrinter:default -p 10000"
-            ObjectPrx base = communicator.stringToProxy("SimplePrinter:default -p 10000");
+        try (Communicator communicator = Util.initialize(args, "client.cfg")) {
+            // Create proxy objects for multiple servers
+            PrinterPrx printer1 = getProxy(communicator, "sort.proxy");
+            PrinterPrx printer2 = getProxy(communicator, "sort.proxy2");
+            PrinterPrx printer3 = getProxy(communicator, "sort.proxy3");
 
-            // Cast the base object to a PrinterPrx object
-            PrinterPrx printer = PrinterPrx.checkedCast(base);
-
-            // Check if the casting was successful, if not, throw an error
-            if (printer == null) {
-                throw new Error("Invalid proxy");
-            }
-
-            // Create a scanner object to read input from the user
             java.util.Scanner scanner = new java.util.Scanner(System.in);
 
-            // Prompt the user to enter the number of elements (or -1 to exit)
             System.out.println("Enter number of elements (or -1 to exit):");
-
-            // Read the number of elements from the user
             int n = scanner.nextInt();
 
-            // Loop until the user enters -1
-            while (n!= -1) {
-                // Create an array of size n
+            while (n != -1) {
                 int[] arr = new int[n];
 
-                // Prompt the user to enter the elements
                 System.out.println("Enter the elements:");
-
-                // Read the elements from the user and store them in the array
                 for (int i = 0; i < n; i++) {
                     arr[i] = scanner.nextInt();
                 }
 
-                // Send the array to the server to be sorted
-                String sortedArray = printer.printString(Arrays.toString(arr));
+                // Calculate the size of each subarray
+                int subArraySize = n / 3;
+                int remainder = n % 3;
 
-                // Display the sorted array received from the server
-                System.out.println("Sorted array received from server: " + sortedArray);
+                // Divide the array into three subarrays
+                int[] arr1 = Arrays.copyOfRange(arr, 0, subArraySize + remainder);
+                int[] arr2 = Arrays.copyOfRange(arr, subArraySize + remainder, 2 * subArraySize + remainder);
+                int[] arr3 = Arrays.copyOfRange(arr, 2 * subArraySize + remainder, n);
 
-                // Prompt the user to enter the number of elements again (or -1 to exit)
+                // Send subarrays to servers asynchronously
+                CompletableFuture<String> result1 = sortArrayAsync(printer1, arr1);
+                CompletableFuture<String> result2 = sortArrayAsync(printer2, arr2);
+                CompletableFuture<String> result3 = sortArrayAsync(printer3, arr3);
+
+                // Combine results from all servers
+                CompletableFuture<Void> allOf = CompletableFuture.allOf(result1, result2, result3);
+                allOf.thenRun(() -> {
+                    try {
+                        // Get the results from CompletableFuture
+                        String sortedArray1 = result1.get();
+                        String sortedArray2 = result2.get();
+                        String sortedArray3 = result3.get();
+
+                        // Display combined results
+                        System.out.println("Sorted array received from server 1: " + sortedArray1);
+                        System.out.println("Sorted array received from server 2: " + sortedArray2);
+                        System.out.println("Sorted array received from server 3: " + sortedArray3);
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    } catch (ExecutionException | InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                }).get(); // Wait for all tasks to complete
+
                 System.out.println("Enter number of elements (or -1 to exit):");
-
-                // Read the number of elements from the user
                 n = scanner.nextInt();
             }
 
         } catch (Exception e) {
-            // Catch any exceptions that occur during the execution of the try block
             e.printStackTrace();
-            // Set the status to 1 if an exception occurs
             status = 1;
+        } catch (ExecutionException | InterruptedException e) {
+            throw new RuntimeException(e);
         }
 
-        // Exit the program with the specified status
         System.exit(status);
+    }
+
+
+    // Helper method to create proxy object from configuration
+    private static PrinterPrx getProxy(Communicator communicator, String configKey) {
+        String proxyConfig = communicator.getProperties().getProperty(configKey);
+        ObjectPrx base = communicator.stringToProxy(proxyConfig);
+        return PrinterPrx.checkedCast(base);
+    }
+
+    // Method to sort array asynchronously
+    private static CompletableFuture<String> sortArrayAsync(PrinterPrx printer, int[] arr) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                // Send the array to the server to be sorted
+                return printer.printString(Arrays.toString(arr));
+            } catch (Exception ex) {
+                throw new RuntimeException(ex);
+            }
+        });
     }
 }
