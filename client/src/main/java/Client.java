@@ -1,54 +1,99 @@
-import java.util.Scanner;
+import com.zeroc.Ice.*;
+import Demo.PrinterPrx;
+import com.zeroc.Ice.Exception;
+import java.util.Arrays;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 public class Client {
+
     public static void main(String[] args) {
-        // Inicializar ICE
-        Ice.Communicator communicator = null;
-        try {
-            communicator = Ice.Util.initialize(args);
+        int status = 0;
 
-            // Obtener el proxy del objeto remoto
-            Ice.ObjectPrx proxy = communicator.stringToProxy("Sorter:tcp -h localhost -p 10000");
+        try (Communicator communicator = Util.initialize(args, "client.cfg")) {
+            // Create proxy objects for multiple servers
+            PrinterPrx printer1 = getProxy(communicator, "sort.proxy");
+            PrinterPrx printer2 = getProxy(communicator, "sort.proxy2");
+            PrinterPrx printer3 = getProxy(communicator, "sort.proxy3");
 
-            // Convertir el proxy al tipo adecuado
-            Demo.SorterPrx sorter = Demo.SorterPrx.checkedCast(proxy);
+            java.util.Scanner scanner = new java.util.Scanner(System.in);
 
-            if (sorter == null) {
-                throw new Error("Invalid proxy");
+            System.out.println("Enter number of elements (or -1 to exit):");
+            int n = scanner.nextInt();
+
+            while (n != -1) {
+                int[] arr = new int[n];
+
+                System.out.println("Enter the elements:");
+                for (int i = 0; i < n; i++) {
+                    arr[i] = scanner.nextInt();
+                }
+
+                // Calculate the size of each subarray
+                int subArraySize = n / 3;
+                int remainder = n % 3;
+
+                // Divide the array into three subarrays
+                int[] arr1 = Arrays.copyOfRange(arr, 0, subArraySize + remainder);
+                int[] arr2 = Arrays.copyOfRange(arr, subArraySize + remainder, 2 * subArraySize + remainder);
+                int[] arr3 = Arrays.copyOfRange(arr, 2 * subArraySize + remainder, n);
+
+                // Send subarrays to servers asynchronously
+                CompletableFuture<String> result1 = sortArrayAsync(printer1, arr1);
+                CompletableFuture<String> result2 = sortArrayAsync(printer2, arr2);
+                CompletableFuture<String> result3 = sortArrayAsync(printer3, arr3);
+
+                // Combine results from all servers
+                CompletableFuture<Void> allOf = CompletableFuture.allOf(result1, result2, result3);
+                allOf.thenRun(() -> {
+                    try {
+                        // Get the results from CompletableFuture
+                        String sortedArray1 = result1.get();
+                        String sortedArray2 = result2.get();
+                        String sortedArray3 = result3.get();
+
+                        // Display combined results
+                        System.out.println("Sorted array received from server 1: " + sortedArray1);
+                        System.out.println("Sorted array received from server 2: " + sortedArray2);
+                        System.out.println("Sorted array received from server 3: " + sortedArray3);
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    } catch (ExecutionException | InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                }).get(); // Wait for all tasks to complete
+
+                System.out.println("Enter number of elements (or -1 to exit):");
+                n = scanner.nextInt();
             }
 
-            // Solicitar al usuario que ingrese los datos a ordenar
-            Scanner scanner = new Scanner(System.in);
-            System.out.print("Ingrese los datos a ordenar separados por espacios: ");
-            String input = scanner.nextLine();
-
-            // Convertir la entrada del usuario en un array de enteros
-            String[] dataStr = input.split("\\s+");
-            int[] data = new int[dataStr.length];
-            for (int i = 0; i < dataStr.length; i++) {
-                data[i] = Integer.parseInt(dataStr[i]);
-            }
-
-            // Llamar al método remoto para ordenar los datos
-            int[] sortedData = sorter.sort(data);
-
-            // Mostrar los datos ordenados
-            System.out.print("Datos ordenados: ");
-            for (int num : sortedData) {
-                System.out.print(num + " ");
-            }
-            System.out.println();
         } catch (Exception e) {
             e.printStackTrace();
-        } finally {
-            // Apagar ICE
-            if (communicator != null) {
-                try {
-                    communicator.destroy();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
+            status = 1;
+        } catch (ExecutionException | InterruptedException e) {
+            throw new RuntimeException(e);
         }
+
+        System.exit(status);
+    }
+
+
+    // Helper method to create proxy object from configuration
+    private static PrinterPrx getProxy(Communicator communicator, String configKey) {
+        String proxyConfig = communicator.getProperties().getProperty(configKey);
+        ObjectPrx base = communicator.stringToProxy(proxyConfig);
+        return PrinterPrx.checkedCast(base);
+    }
+
+    // Method to sort array asynchronously
+    private static CompletableFuture<String> sortArrayAsync(PrinterPrx printer, int[] arr) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                // Send the array to the server to be sorted
+                return printer.printString(Arrays.toString(arr));
+            } catch (Exception ex) {
+                throw new RuntimeException(ex);
+            }
+        });
     }
 }

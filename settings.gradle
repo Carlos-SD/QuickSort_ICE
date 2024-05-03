@@ -1,4 +1,3 @@
-rootProject.name = 'SortingAlgoritm'
-
-include 'server'
+rootProject.name = 'QuickSortOrdenamiento'
 include 'client'
+include 'server'
