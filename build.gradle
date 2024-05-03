@@ -14,7 +14,7 @@ subprojects {
     //
     slice {
         java {
-            files = [file("../OrdenamientoZeroC.ice")]
+            files = [file("../Quick.ice")]
         }
     }
     //
