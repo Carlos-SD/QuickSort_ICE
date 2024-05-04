@@ -10,11 +10,11 @@ public class Server {
      * @throws Exception If there is an error during initialization or execution of the application.
      */
     public static void main(String[] args) {
-        try (Communicator communicator = Util.initialize(args, "serve.cfg")) {
+        try (Communicator communicator = Util.initialize(args, "server.cfg")) {
             /**
              * Creates an ObjectAdapter object with the name "SimplePrinterAdapter" and the endpoint "default -p 10000".
              */
-            ObjectAdapter adapter = communicator.createObjectAdapterWithEndpoints("SimplePrinterAdapter", "default -p 10000");
+            ObjectAdapter adapter = communicator.createObjectAdapterWithEndpoints("SimplePrinterAdapter", "default -p 10003");
             /**
              * Creates a Printer object of type QuickSortI.
              */
@@ -22,8 +22,7 @@ public class Server {
             /**
              * Adds the Printer object to the ObjectAdapter with the identity "SimplePrinter".
              */
-            adapter.add(printer, Util.stringToIdentity("SimplePrinter"));
-            adapter.add(printer, Util.stringToIdentity("SimpleSort"));
+            adapter.add(printer, Util.stringToIdentity("SimplerSort3"));
             /**
              * Activates the ObjectAdapter.
              */
